@@ -1,17 +1,42 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Check, Sparkles } from 'lucide-react';
+import { Mail, Check, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
-      setSubmitted(true);
-      setEmail('');
+    if (!email.trim()) return;
+
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setSubmitted(true);
+        setEmail('');
+      } else {
+        setErrorMessage(data.error || 'Something went wrong. Please try again.');
+      }
+    } catch (error) {
+      setErrorMessage('Failed to connect to the server. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,7 +76,7 @@ export default function Newsletter() {
                   </div>
                   <h3 className="font-serif text-xl font-medium text-linen-light">Welcome to the inner circle!</h3>
                   <p className="font-sans text-xs text-linen-warm/80 font-light">
-                    Check your inbox soon for Mamm’s welcome guide to ceremonial matcha.
+                    Your email has been saved to our database. Check your inbox soon for Mamm’s welcome guide.
                   </p>
                 </div>
               ) : (
@@ -61,22 +86,38 @@ export default function Newsletter() {
                     <input
                       type="email"
                       required
+                      disabled={loading}
                       placeholder="Enter your email address..."
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-matcha-ceremonial/80 border border-matcha-soft/40 text-linen-light placeholder-linen-warm/50 font-sans text-sm focus:outline-none focus:border-matcha-accent focus:ring-1 focus:ring-matcha-accent transition-all"
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-matcha-ceremonial/80 border border-matcha-soft/40 text-linen-light placeholder-linen-warm/50 font-sans text-sm focus:outline-none focus:border-matcha-accent focus:ring-1 focus:ring-matcha-accent transition-all disabled:opacity-60"
                     />
                   </div>
 
+                  {errorMessage && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-red-900/40 border border-red-500/30 text-red-200 text-xs font-sans">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    className="w-full py-4 rounded-2xl bg-linen-light text-matcha-deep font-sans text-xs font-semibold uppercase tracking-widest hover:bg-matcha-accent transition-colors duration-300 shadow-sm"
+                    disabled={loading}
+                    className="w-full py-4 rounded-2xl bg-linen-light text-matcha-deep font-sans text-xs font-semibold uppercase tracking-widest hover:bg-matcha-accent transition-colors duration-300 shadow-sm flex items-center justify-center gap-2 disabled:opacity-70"
                   >
-                    Subscribe for Free
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-matcha-deep" />
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      <span>Subscribe for Free</span>
+                    )}
                   </button>
 
                   <span className="text-[11px] font-sans text-linen-warm/50 text-center block">
-                    No spam. Unsubscribe anytime with one click.
+                    Saved directly to Mamm’s MongoDB cloud cluster.
                   </span>
                 </form>
               )}
